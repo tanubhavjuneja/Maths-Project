@@ -11,6 +11,7 @@ class Graph:
     def dijkstra(self, source):
         distance = [float('inf')] * self.vertices
         distance[source] = 0
+        self.previous = [None] * self.vertices  # New line
         heap = [(0, source)]
         heapq.heapify(heap)
         while heap:
@@ -21,31 +22,34 @@ class Graph:
                 new_dist = dist + weight
                 if new_dist < distance[neighbor]:
                     distance[neighbor] = new_dist
+                    self.previous[neighbor] = node  # Updated line
                     heapq.heappush(heap, (new_dist, neighbor))
         return distance
-    def second_best_path(self, source, destination):
+    def shortest_path(self, source, destination):
         distance = self.dijkstra(source)
         shortest_path_distance = distance[destination]
-        removed_edges = set()
-        for node in range(self.vertices):
-            for neighbor, weight in self.adjacency_list[node]:
-                if distance[node] + weight + distance[neighbor] == shortest_path_distance:
-                    removed_edges.add((node, neighbor))
-                    removed_edges.add((neighbor, node))
+        path = self.get_path(source, destination)
+        return shortest_path_distance, path
+    def second_best_path(self, source, destination):
+        shortest_path_distance, shortest_path = self.shortest_path(source, destination)
         second_best_distance = float('inf')
         second_best_path = []
         for u, v, weight in self.get_edges():
-            if (u, v) in removed_edges or (v, u) in removed_edges:
-                continue
             self.remove_edge(u, v)
             self.remove_edge(v, u)
             distance = self.dijkstra(source)
-            if distance[destination] < second_best_distance:
+            if distance[destination] < second_best_distance and distance[destination] != shortest_path_distance:
                 second_best_distance = distance[destination]
-                second_best_path = distance.copy()
+                second_best_path = self.get_path(source, destination)
             self.add_edge(u, v, weight)
             self.add_edge(v, u, weight)
         return second_best_distance, second_best_path
+    def get_path(self, source, destination):
+        path = [destination]
+        while destination != source:
+            destination = self.previous[destination]
+            path.append(destination)
+        return path[::-1]
     def get_edges(self):
         edges = []
         for node in range(self.vertices):
@@ -125,10 +129,11 @@ graph.add_edge(26, 29, 7)
 graph.add_edge(26, 30, 5)
 print("Graph:")
 print(graph)
-source_vertex = 0
-destination_vertex = 3
-shortest_path_distance = graph.dijkstra(source_vertex)[destination_vertex]
+source_vertex = 5
+destination_vertex = 24
+shortest_path_distance, shortest_path = graph.shortest_path(source_vertex, destination_vertex)
 print(f"Shortest path distance: {shortest_path_distance}")
+print(f"Shortest path: {shortest_path}")
 second_best_distance, second_best_path = graph.second_best_path(source_vertex, destination_vertex)
 print(f"Second-best path distance: {second_best_distance}")
 print(f"Second-best path: {second_best_path}")
@@ -137,6 +142,7 @@ for node in range(graph.vertices):
     for neighbor, weight in graph.adjacency_list[node]:
         nx_graph.add_edge(node, neighbor, weight=weight)
 pos = nx.spring_layout(nx_graph)
-nx.draw(nx_graph, pos, with_labels=True, node_color='lightblue', node_size=500, font_size=10, font_weight='bold', edge_color='gray', width=1, alpha=0.7)
+nx.draw(nx_graph, pos, with_labels=True, node_color='lightblue', node_size=500, font_size=10, font_weight='bold',
+        edge_color='gray', width=1, alpha=0.7)
 plt.savefig("graph_image.png")
 plt.show()
